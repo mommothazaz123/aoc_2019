@@ -9,6 +9,7 @@
 # opcode 9:  9 VARa           => relbase = relbase + VARa
 # opcode 99: 99               => halt
 # step: pos += 4
+import collections
 
 
 class Value:
@@ -123,7 +124,78 @@ class Intcode:
             self.pc.step(nargs + 1)
 
 
-if __name__ == '__main__':
-    computer = Intcode()
+def get_around(pos):
+    x, y = pos
+    return [(x, y + 1), (x, y - 1), (x - 1, y), (x + 1, y)]  # n, s, w, e
+
+
+def draw(positions):
+    # cleanup positions
+    min_x = min(p[0] for p in positions.keys())
+    min_y = min(p[1] for p in positions.keys())
+
+    clean_pos = {(x - min_x, y - min_y): v for (x, y), v in positions.items()}
+    max_x = max(p[0] for p in clean_pos.keys())
+    max_y = max(p[1] for p in clean_pos.keys())
+
+    grid = [([0] * (max_x + 1)).copy() for _ in range(max_y + 1)]
+    for pos, val in clean_pos.items():
+        grid[max_y - pos[1]][pos[0]] = val
+
+    g = '\n'.join([''.join(map(str, [row for row in col])) for col in grid])
+    print(g.replace('0', '#').replace('1', ' '))
+
+
+def run():
+    # movement: 1=n, 2=s, 3=w, 4=e
+    # explored: -1=unknown, 0=wall, 1=empty, 2=oxy
+    positions = collections.defaultdict(lambda: -1, [((0, 0), 0)])
+    current = (0, 0)
+    new_pos = None
+    visited = {(0, 0)}
+    stack = [(0, 0)]
+
+    def get_movement():
+        nonlocal new_pos
+        new_pos = next((p for p in get_around(current) if p not in visited), None)
+        if new_pos is None:
+            del stack[-1]
+            new_pos = stack[-1]
+        return get_around(current).index(new_pos) + 1
+
+    def process_movement(result):
+        nonlocal current
+        visited.add(new_pos)
+        positions[new_pos] = result
+        if result != 0:
+            current = new_pos
+            if new_pos != stack[-1]:
+                stack.append(new_pos)
+
+    computer = Intcode(i=get_movement, o=process_movement)
     program = list(map(Value, input().split(',')))
-    computer.run(program)
+    try:
+        computer.run(program)
+    except IndexError:  # full maze is explored
+        pass
+
+    start = (16, -12)
+    draw(positions)
+
+    visited = set()
+
+    def furthest_from(pos):
+        visited.add(pos)
+        distances = []
+        for p in get_around(pos):
+            if positions[p] != 0 and p not in visited:
+                distances.append(furthest_from(p))
+        if distances:
+            return max(distances) + 1
+        return 0
+
+    print(furthest_from(start))
+
+
+if __name__ == '__main__':
+    run()

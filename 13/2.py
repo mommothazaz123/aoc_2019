@@ -1,7 +1,4 @@
 import collections
-import subprocess
-from queue import Queue
-from threading import Thread
 
 
 # opcode 1:  1 VARa VARb PTRc => *PTRc = VARa + VARb
