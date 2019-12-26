@@ -96,7 +96,7 @@ class Intcode:
 
     # runner
     def run(self, p):
-        p = p + [Value(0) for _ in range(1000)]
+        p = p + [Value(0) for _ in range(5000)]
         self.running = True
         self.relbase = 0
 
@@ -125,22 +125,11 @@ class Intcode:
 
 
 class ASCIIIntcode(Intcode):
-    def __init__(self, *args, o=None, **kwargs):
-        o = o or functools.partial(print, end='')
-        super().__init__(*args, o=o, **kwargs)
-        self._in_buf = []
-
-    def op3(self, a):
-        if not self._in_buf:
-            self._in_buf.extend([ord(c) for c in self.i()])
-            self._in_buf.append(10)
-        a.n = int(self._in_buf.pop(0))
-
     def op4(self, a):
         self.o(chr(a.n))
 
 
 if __name__ == '__main__':
-    computer = Intcode()
+    computer = ASCIIIntcode(o=functools.partial(print, end=''))
     program = list(map(Value, input().split(',')))
     computer.run(program)

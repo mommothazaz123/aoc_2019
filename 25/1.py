@@ -10,6 +10,7 @@
 # opcode 99: 99               => halt
 # step: pos += 4
 import functools
+import itertools
 
 
 class Value:
@@ -140,7 +141,97 @@ class ASCIIIntcode(Intcode):
         self.o(chr(a.n))
 
 
-if __name__ == '__main__':
-    computer = Intcode()
-    program = list(map(Value, input().split(',')))
+ITEMS = [
+    "loom",
+    "spool of cat6",
+    "fixed point",
+    "candy cane",
+    "weather machine",
+    "ornament",
+    "wreath",
+    "shell"
+]
+
+INITIAL_REPLAY = [
+    "east",
+    "take loom",
+    "south",
+    "take ornament",
+    "west",
+    "north",
+    "take candy cane",
+    "south",
+    "east",
+    "north",
+    "east",
+    "take fixed point",
+    "north",
+    "take spool of cat6",
+    "north",
+    "take weather machine",
+    "south",
+    "west",
+    "take shell",
+    "east",
+    "south",
+    "west",
+    "west",
+    "north",
+    "take wreath",
+    "north",
+    "east",
+    # drop all items
+]
+
+
+def run():
+    state = 0
+    held_items = [
+        "loom",
+        "spool of cat6",
+        "fixed point",
+        "candy cane",
+        "weather machine",
+        "ornament",
+        "wreath",
+        "shell"
+    ]
+    buf = []
+
+    def do_input():
+        if buf:
+            return buf.pop(0)
+
+        nonlocal state
+        if state == -1:
+            return input()
+
+        if state == 0:
+            if INITIAL_REPLAY:
+                return INITIAL_REPLAY.pop(0)
+            else:
+                state = 1
+
+        if state == 1:  # drop all items
+            if held_items:
+                return f"drop {held_items.pop(0)}"
+            else:
+                state = 2
+                return do_input()
+
+        if state >= 2:
+            for comb in itertools.combinations(ITEMS, state - 1):
+                buf.extend(f"take {i}" for i in comb)
+                buf.append("south")
+                buf.extend(f"drop {i}" for i in comb)
+            state += 1
+            return do_input()
+
+    computer = ASCIIIntcode(i=do_input)
+    with open('in.txt') as f:
+        program = list(map(Value, f.read().strip().split(',')))
     computer.run(program)
+
+
+if __name__ == '__main__':
+    run()
